@@ -1,0 +1,184 @@
+/* =====================================================================
+   DentaCit — Cliente web del paciente (mobile-first, RNF-04)
+   Paleta y tipografías del diseño del tercer avance.
+   ===================================================================== */
+:root {
+  --azul-profundo: #0F2340;
+  --azul-accion: #2563EB;
+  --azul-claro: #DBE6FE;
+  --fondo: #F1F3F8;
+  --blanco: #FFFFFF;
+  --texto: #0F2340;
+  --texto-suave: #4B5563;
+  --borde: #DCE1EB;
+  --ambar: #B45309;  --ambar-fondo: #FEF3C7;
+  --verde: #15803D;  --verde-fondo: #DCFCE7;
+  --rojo: #B91C1C;   --rojo-fondo: #FEE2E2;
+  --radio: 14px;
+  --sombra: 0 1px 2px rgba(15, 35, 64, .06), 0 4px 16px rgba(15, 35, 64, .06);
+  --fuente-titulo: 'Fraunces', Georgia, serif;
+  --fuente-cuerpo: 'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  font-family: var(--fuente-cuerpo);
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--texto);
+  background: var(--fondo);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+h1, h2, h3 { font-family: var(--fuente-titulo); line-height: 1.2; margin: 0 0 .5rem; }
+a { color: var(--azul-accion); }
+[hidden] { display: none !important; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+:focus-visible { outline: 3px solid var(--azul-accion); outline-offset: 2px; }
+
+/* ---------- Encabezado ---------- */
+.encabezado {
+  position: sticky; top: 0; z-index: 10;
+  background: var(--azul-profundo);
+  color: var(--blanco);
+  padding: 12px 16px;
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px;
+}
+.marca {
+  display: inline-flex; align-items: center; gap: 8px;
+  color: var(--blanco); text-decoration: none;
+  font-family: var(--fuente-titulo); font-size: 1.35rem; font-weight: 700;
+}
+.marca-icono { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; background: var(--azul-accion); }
+.menu { display: flex; gap: 4px; }
+.menu a {
+  color: #C9D4E8; text-decoration: none; font-weight: 600; font-size: .92rem;
+  padding: 8px 10px; border-radius: 8px;
+}
+.menu a[aria-current] { color: var(--blanco); background: rgba(255, 255, 255, .12); }
+
+/* ---------- Estructura ---------- */
+main { flex: 1; width: 100%; max-width: 960px; margin: 0 auto; padding: 16px; }
+.pie { text-align: center; color: var(--texto-suave); font-size: .85rem; padding: 24px 16px; }
+.titulo-vista { font-size: 1.7rem; margin: 8px 0 16px; }
+.subtitulo { font-size: 1.3rem; margin: 28px 0 12px; }
+
+.portada {
+  background: linear-gradient(135deg, var(--azul-profundo), #1E3A6B);
+  color: var(--blanco);
+  border-radius: var(--radio);
+  padding: 28px 20px;
+}
+.portada h1 { font-size: 1.9rem; }
+.portada p { color: #D5DEEE; margin: 0 0 20px; max-width: 520px; }
+
+.tarjeta { background: var(--blanco); border-radius: var(--radio); box-shadow: var(--sombra); padding: 18px; }
+.rejilla { display: grid; gap: 12px; }
+
+/* ---------- Servicios ---------- */
+.servicio { display: flex; flex-direction: column; }
+.servicio h3 { font-size: 1.15rem; }
+.servicio p { color: var(--texto-suave); margin: 0 0 12px; font-size: .95rem; }
+.servicio-pie { margin-top: auto; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.precio { font-weight: 700; font-size: 1.15rem; color: var(--azul-accion); }
+
+/* ---------- Botones ---------- */
+.boton {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-height: 48px; padding: 0 20px;
+  border: 0; border-radius: 12px;
+  font: 600 1rem var(--fuente-cuerpo);
+  text-decoration: none; cursor: pointer;
+}
+.boton-primario { background: var(--azul-accion); color: var(--blanco); }
+.boton-primario:hover { background: #1D4ED8; }
+.boton-primario:disabled { opacity: .6; cursor: wait; }
+.boton-secundario { background: var(--azul-claro); color: var(--azul-profundo); }
+.boton-texto { background: transparent; color: var(--azul-accion); }
+.boton-chico { min-height: 40px; padding: 0 14px; font-size: .92rem; }
+.boton-ancho { width: 100%; }
+
+/* ---------- Formulario ---------- */
+.formulario fieldset { border: 0; padding: 0; margin: 0 0 22px; min-width: 0; }
+.formulario legend { font-weight: 700; font-size: 1.05rem; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+.paso {
+  display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 50%;
+  background: var(--azul-profundo); color: var(--blanco); font-size: .85rem;
+}
+.campo { display: block; font-weight: 600; font-size: .95rem; margin-bottom: 14px; }
+.campo input, .campo select, .campo textarea {
+  display: block; width: 100%; margin-top: 6px;
+  min-height: 48px; padding: 10px 12px;
+  border: 1.5px solid var(--borde); border-radius: 10px;
+  font: 400 1rem var(--fuente-cuerpo); color: var(--texto); background: var(--blanco);
+}
+.campo textarea { resize: vertical; }
+.campo input:focus, .campo select:focus, .campo textarea:focus { border-color: var(--azul-accion); outline: none; }
+.campo small, .ayuda { display: block; color: var(--texto-suave); font-weight: 400; font-size: .85rem; margin-top: 4px; }
+.opcional { color: var(--texto-suave); font-weight: 400; }
+
+/* Fichas de día y hora */
+.fichas { display: flex; flex-wrap: wrap; gap: 8px; }
+.fichas-desplazables { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 6px; scroll-snap-type: x mandatory; }
+.ficha {
+  flex: 0 0 auto; min-height: 44px; min-width: 76px; padding: 8px 14px;
+  border: 1.5px solid var(--borde); border-radius: 12px;
+  background: var(--blanco); color: var(--texto);
+  font: 600 .95rem var(--fuente-cuerpo); cursor: pointer; scroll-snap-align: start;
+}
+.ficha-dia { display: flex; flex-direction: column; align-items: center; }
+.ficha-dia small { font-weight: 400; color: var(--texto-suave); font-size: .78rem; }
+.ficha[aria-checked="true"] { background: var(--azul-accion); border-color: var(--azul-accion); color: var(--blanco); }
+.ficha[aria-checked="true"] small { color: #DBE6FE; }
+
+/* ---------- Mensajes ---------- */
+.alerta { border-radius: 10px; padding: 12px 14px; margin: 0 0 14px; font-weight: 500; }
+.alerta-error { background: var(--rojo-fondo); color: var(--rojo); }
+.cargando, .vacio { color: var(--texto-suave); }
+
+/* ---------- Confirmación ---------- */
+.confirmacion { text-align: center; }
+.confirmacion:focus { outline: none; }
+.confirmacion-icono {
+  width: 64px; height: 64px; margin: 4px auto 12px; border-radius: 50%;
+  display: grid; place-items: center; font-size: 2rem; color: var(--verde); background: var(--verde-fondo);
+}
+.resumen {
+  display: grid; grid-template-columns: auto 1fr; gap: 6px 16px;
+  text-align: left; background: var(--fondo); border-radius: 10px; padding: 14px 16px; margin: 18px 0;
+}
+.resumen dt { color: var(--texto-suave); }
+.resumen dd { margin: 0; font-weight: 600; }
+.acciones { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+
+/* ---------- Estatus ---------- */
+.estatus { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: .82rem; font-weight: 700; white-space: nowrap; }
+.estatus-pendiente { background: var(--ambar-fondo); color: var(--ambar); }
+.estatus-aceptada { background: var(--verde-fondo); color: var(--verde); }
+.estatus-rechazada { background: var(--rojo-fondo); color: var(--rojo); }
+
+/* ---------- Mis citas ---------- */
+.consulta { display: flex; flex-direction: column; gap: 4px; margin-bottom: 16px; }
+.lista-citas { display: grid; gap: 12px; }
+.cita-encabezado { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.cita h3 { font-size: 1.1rem; }
+.cita p { margin: 0; color: var(--texto-suave); }
+.cita .sintomas { margin-top: 6px; font-size: .92rem; font-style: italic; }
+
+/* ---------- Pantallas grandes ---------- */
+@media (min-width: 640px) {
+  main { padding: 24px; }
+  .portada { padding: 40px 36px; }
+  .portada h1 { font-size: 2.4rem; }
+  .rejilla { grid-template-columns: repeat(2, 1fr); }
+  .formulario { max-width: 640px; }
+  .confirmacion { max-width: 520px; margin: 0 auto; }
+  .consulta { flex-direction: row; align-items: flex-end; max-width: 560px; }
+  .consulta .campo { flex: 1; margin: 0; }
+}
+@media (min-width: 900px) {
+  .rejilla { grid-template-columns: repeat(3, 1fr); }
+}

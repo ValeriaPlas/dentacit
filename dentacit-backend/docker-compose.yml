@@ -1,0 +1,99 @@
+# =====================================================================
+# DentaCit — Orquestación de microservicios con Docker Compose
+#   docker compose up -d --build
+# Gateway: http://localhost:8080   (API en /api/...)
+# =====================================================================
+name: dentacit
+
+x-entorno-comun: &entorno-comun
+  TZ: America/Mexico_City
+  DB_HOST: mysql
+  DB_PORT: "3306"
+  DB_NAME: ${DB_NAME:-dentacit}
+  DB_USER: ${DB_USER:-dentacit}
+  DB_PASS: ${DB_PASS:?Define DB_PASS en .env}
+  JWT_SECRET: ${JWT_SECRET:?Define JWT_SECRET en .env}
+  INTERNAL_KEY: ${INTERNAL_KEY:?Define INTERNAL_KEY en .env}
+
+services:
+  mysql:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      TZ: America/Mexico_City
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Define MYSQL_ROOT_PASSWORD en .env}
+      MYSQL_DATABASE: ${DB_NAME:-dentacit}
+      MYSQL_USER: ${DB_USER:-dentacit}
+      MYSQL_PASSWORD: ${DB_PASS}
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - datos-mysql:/var/lib/mysql
+      - ./db:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks: [interna]
+
+  auth-service:
+    build: ./services/auth-service
+    restart: unless-stopped
+    environment:
+      <<: *entorno-comun
+      NOTIF_URL: http://notif-service:3001
+    depends_on:
+      mysql: { condition: service_healthy }
+    networks: [interna]
+
+  citas-service:
+    build: ./services/citas-service
+    restart: unless-stopped
+    environment:
+      <<: *entorno-comun
+      CATALOGO_URL: http://catalogo-service
+      NOTIF_URL: http://notif-service:3001
+      DURACION_CITA_MIN: "60"
+    depends_on:
+      mysql: { condition: service_healthy }
+    networks: [interna]
+
+  catalogo-service:
+    build: ./services/catalogo-service
+    restart: unless-stopped
+    environment:
+      <<: *entorno-comun
+    depends_on:
+      mysql: { condition: service_healthy }
+    networks: [interna]
+
+  notif-service:
+    build: ./services/notif-service
+    restart: unless-stopped
+    environment:
+      TZ: America/Mexico_City
+      INTERNAL_KEY: ${INTERNAL_KEY}
+      WEB_URL: ${WEB_URL:-http://localhost:8080/}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-DentaCit <no-reply@dentacit.local>}
+    networks: [interna]
+
+  gateway:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    ports:
+      - "${GATEWAY_PORT:-8080}:80"
+    volumes:
+      - ./gateway/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./web:/usr/share/nginx/html:ro
+    depends_on: [auth-service, citas-service, catalogo-service, notif-service]
+    networks: [interna]
+
+volumes:
+  datos-mysql:
+
+networks:
+  interna:

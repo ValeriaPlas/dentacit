@@ -1,0 +1,18 @@
+{
+    "name": "dentacit/citas-service",
+    "description": "Microservicio de citas y horarios de DentaCit",
+    "type": "project",
+    "require": {
+        "php": ">=8.2",
+        "ext-pdo": "*"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^10.5"
+    },
+    "autoload": {
+        "psr-4": { "Dentacit\\Citas\\": "src/" }
+    },
+    "scripts": {
+        "test": "phpunit"
+    }
+}

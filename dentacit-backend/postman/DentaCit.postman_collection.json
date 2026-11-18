@@ -1,0 +1,1089 @@
+{
+  "info": {
+    "name": "DentaCit — Pruebas de integración",
+    "description": "Pruebas de integración del API Gateway de DentaCit. Ejecuta la colección completa en orden con el Collection Runner. Requiere el sistema levantado con docker compose y los datos de prueba recién cargados.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080/api"
+    },
+    {
+      "key": "token",
+      "value": ""
+    },
+    {
+      "key": "manana",
+      "value": ""
+    },
+    {
+      "key": "cita_id",
+      "value": ""
+    },
+    {
+      "key": "horario_id",
+      "value": ""
+    },
+    {
+      "key": "servicio_id",
+      "value": ""
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "const d = new Date(Date.now() + 86400000);",
+          "pm.collectionVariables.set('manana', d.toISOString().slice(0,10));",
+          "const p = new Date(Date.now() + 5*86400000);",
+          "pm.collectionVariables.set('en5dias', p.toISOString().slice(0,10));"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Autenticación (auth-service)",
+      "item": [
+        {
+          "name": "Login con contraseña incorrecta → 401",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"dentista@dentacit.com\",\n  \"password\": \"incorrecta\"\n}"
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Rechaza credenciales inválidas', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login correcto → token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"dentista@dentacit.com\",\n  \"password\": \"dentacit123\"\n}"
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Inicia sesión', () => pm.response.to.have.status(200));",
+                  "const r = pm.response.json();",
+                  "pm.test('Devuelve token JWT', () => pm.expect(r.token.split('.').length).to.eql(3));",
+                  "pm.collectionVariables.set('token', r.token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Verificar token",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/auth/verificar",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "verificar"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Token válido', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2. Catálogo (catalogo-service)",
+      "item": [
+        {
+          "name": "Catálogo público (solo activos)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/servicios",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "servicios"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Lista servicios', () => pm.response.to.have.status(200));",
+                  "pm.test('Solo activos', () => pm.response.json().forEach(s => pm.expect(s.activo).to.be.true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Crear servicio sin token → 401",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/servicios",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "servicios"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"X\",\n  \"costo\": 10\n}"
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Requiere sesión', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Crear servicio inválido → 422",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/servicios",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "servicios"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"\",\n  \"costo\": 0\n}"
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Valida nombre y costo', () => pm.response.to.have.status(422));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Crear servicio",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/servicios",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "servicios"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Endodoncia\",\n  \"descripcion\": \"Tratamiento de conducto\",\n  \"costo\": 2800\n}"
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Crea servicio', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('servicio_id', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Editar servicio",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/servicios/{{servicio_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "servicios",
+                "{{servicio_id}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Endodoncia\",\n  \"descripcion\": \"Tratamiento de conducto\",\n  \"costo\": 3000,\n  \"activo\": true\n}"
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Actualiza', () => pm.response.to.have.status(200));",
+                  "pm.test('Nuevo costo', () => pm.expect(pm.response.json().costo).to.eql(3000));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Eliminar servicio",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/servicios/{{servicio_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "servicios",
+                "{{servicio_id}}"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Elimina', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3. Agenda (citas-service)",
+      "item": [
+        {
+          "name": "Horas disponibles mañana (público)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/horarios/disponibles?fecha={{manana}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "horarios",
+                "disponibles"
+              ],
+              "query": [
+                {
+                  "key": "fecha",
+                  "value": "{{manana}}"
+                }
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Devuelve horas', () => pm.response.to.have.status(200));",
+                  "pm.test('No incluye 10:00 (ocupada)', () => pm.expect(pm.response.json().horas).to.not.include('10:00'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Crear horario empalmado → 422",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/horarios",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "horarios"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fecha\": \"{{manana}}\",\n  \"hora_inicio\": \"13:00\",\n  \"hora_fin\": \"15:00\"\n}"
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Detecta empalme', () => pm.response.to.have.status(422));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Crear horario válido",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/horarios",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "horarios"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fecha\": \"{{en5dias}}\",\n  \"hora_inicio\": \"15:00\",\n  \"hora_fin\": \"18:00\"\n}"
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Crea horario', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('horario_id', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar horarios",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/horarios",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "horarios"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Lista horarios', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Eliminar horario",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/horarios/{{horario_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "horarios",
+                "{{horario_id}}"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Elimina horario', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "4. Citas: flujo paciente → dentista → correo",
+      "item": [
+        {
+          "name": "Paciente solicita cita (web)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/citas",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "citas"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Pedro Ruiz\",\n  \"correo\": \"pedro.postman@correo.com\",\n  \"telefono\": \"4770001111\",\n  \"id_servicio\": 2,\n  \"fecha\": \"{{manana}}\",\n  \"hora\": \"11:00\",\n  \"sintomas\": \"Me duele una muela\"\n}"
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Crea solicitud', () => pm.response.to.have.status(201));",
+                  "const r = pm.response.json();",
+                  "pm.test('Queda Pendiente (RF-04)', () => pm.expect(r.estatus).to.eql('Pendiente'));",
+                  "pm.collectionVariables.set('cita_id', r.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Mismo paciente, segunda solicitud → 422",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/citas",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "citas"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Pedro Ruiz\",\n  \"correo\": \"pedro.postman@correo.com\",\n  \"id_servicio\": 1,\n  \"fecha\": \"{{manana}}\",\n  \"hora\": \"13:00\"\n}"
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Una solicitud pendiente a la vez', () => pm.response.to.have.status(422));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Otro paciente en la misma hora → 422",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/citas",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "citas"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Eva Soto\",\n  \"correo\": \"eva.postman@correo.com\",\n  \"id_servicio\": 1,\n  \"fecha\": \"{{manana}}\",\n  \"hora\": \"11:00\"\n}"
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Sin empalme de citas', () => pm.response.to.have.status(422));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Hora fuera del horario → 422",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/citas",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "citas"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Eva Soto\",\n  \"correo\": \"eva.postman@correo.com\",\n  \"id_servicio\": 1,\n  \"fecha\": \"{{manana}}\",\n  \"hora\": \"15:00\"\n}"
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Solo en horarios definidos', () => pm.response.to.have.status(422));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar citas sin token → 401",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/citas",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "citas"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Requiere sesión', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Dentista ve solicitudes pendientes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/citas?estatus=Pendiente",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "citas"
+              ],
+              "query": [
+                {
+                  "key": "estatus",
+                  "value": "Pendiente"
+                }
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Lista', () => pm.response.to.have.status(200));",
+                  "pm.test('Incluye la nueva cita', () => pm.expect(pm.response.json().map(c => c.id)).to.include(Number(pm.collectionVariables.get('cita_id'))));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Dentista acepta la cita",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/citas/{{cita_id}}/estatus",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "citas",
+                "{{cita_id}}",
+                "estatus"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"estatus\": \"Aceptada\"\n}"
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Acepta', () => pm.response.to.have.status(200));",
+                  "pm.test('Se envió el correo (RF-06)', () => pm.expect(pm.response.json().correo_enviado).to.be.true);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Responder de nuevo → 422",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/citas/{{cita_id}}/estatus",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "citas",
+                "{{cita_id}}",
+                "estatus"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"estatus\": \"Rechazada\"\n}"
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('La cita ya no se modifica', () => pm.response.to.have.status(422));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Paciente consulta sus citas",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/citas/paciente?correo=pedro.postman@correo.com",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "citas",
+                "paciente"
+              ],
+              "query": [
+                {
+                  "key": "correo",
+                  "value": "pedro.postman@correo.com"
+                }
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Lista', () => pm.response.to.have.status(200));",
+                  "pm.test('Aparece Aceptada', () => pm.expect(pm.response.json()[0].estatus).to.eql('Aceptada'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "5. QR y seguridad del gateway",
+      "item": [
+        {
+          "name": "QR del consultorio",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/qr",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "qr"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Genera QR', () => pm.response.to.have.status(200));",
+                  "pm.test('Es PNG', () => pm.expect(pm.response.headers.get('Content-Type')).to.eql('image/png'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Notificaciones desde fuera → 404",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/notificaciones/cita",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "notificaciones",
+                "cita"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('El gateway bloquea rutas internas', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
