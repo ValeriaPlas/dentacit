@@ -1,272 +1,429 @@
 /**
- * Cliente web del paciente — DentaCit.
- * Vistas: catálogo de servicios, formulario de cita y consulta de mis citas.
- * Navegación por hash (#servicios, #agendar, #mis-citas).
+ * Vista del paciente — DentaCit.
+ * Mismo flujo que el catalogo.php original (servicio → horario → datos → confirmación,
+ * Mis citas y Perfil), pero los datos vienen de los microservicios por medio del API Gateway.
  */
-import { api } from './api.js';
+import {
+  apiPaciente, escapar, precio, hora12, partesFecha, fechaLarga, hoyIso, iniciales,
+} from './api.js';
 
-const $ = (selector) => document.querySelector(selector);
-const formatoPrecio = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' });
-const formatoDia = new Intl.DateTimeFormat('es-MX', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
-const formatoFecha = new Intl.DateTimeFormat('es-MX', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+const $ = (id) => document.getElementById(id);
 
 const estado = {
   servicios: [],
-  dias: [],
-  diaElegido: null,
-  horaElegida: null,
+  servicio: null,   // {id, nombre, costo}
+  fecha: '',
+  hora: '',         // "09:00"
+  citas: [],
 };
 
-/* ---------- Utilidades ---------- */
+/* ---------- Datos del paciente guardados en este dispositivo ---------- */
 
-/** Escapa texto antes de insertarlo como HTML (evita XSS). */
-function escapar(texto) {
-  return String(texto ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-}
-
-const aFecha = (iso) => new Date(`${iso}T00:00:00Z`);
-const mayuscula = (t) => t.charAt(0).toUpperCase() + t.slice(1);
-const diaCorto = (iso) => mayuscula(formatoDia.format(aFecha(iso)).replaceAll('.', ''));
-const fechaLarga = (iso) => mayuscula(formatoFecha.format(aFecha(iso)));
-
-/** Recuerda los datos del paciente en este navegador (solo como comodidad). */
-const memoria = {
+const CLAVE_PACIENTE = 'dentacit-paciente';
+const paciente = {
   leer() {
-    try { return JSON.parse(localStorage.getItem('dentacit-paciente')) || {}; } catch { return {}; }
+    try { return JSON.parse(localStorage.getItem(CLAVE_PACIENTE)) || {}; } catch { return {}; }
   },
   guardar(datos) {
-    try { localStorage.setItem('dentacit-paciente', JSON.stringify(datos)); } catch { /* sin almacenamiento */ }
+    try { localStorage.setItem(CLAVE_PACIENTE, JSON.stringify({ ...paciente.leer(), ...datos })); } catch { /* sin almacenamiento */ }
+  },
+  borrar() {
+    try { localStorage.removeItem(CLAVE_PACIENTE); } catch { /* nada */ }
   },
 };
 
-/* ---------- Navegación ---------- */
+/* ---------- Navegación entre pantallas y pasos ---------- */
 
-const VISTAS = ['servicios', 'agendar', 'mis-citas'];
+const NAV_DE_PANTALLA = { 'scr-home': 'nav-home', 'scr-confirm': 'nav-home', 'scr-citas': 'nav-citas', 'scr-perfil': 'nav-perfil' };
 
-function mostrarVista() {
-  const vista = VISTAS.includes(location.hash.slice(1)) ? location.hash.slice(1) : 'servicios';
-  VISTAS.forEach((v) => { $(`#vista-${v}`).hidden = v !== vista; });
-  document.querySelectorAll('.menu a').forEach((a) => {
-    a.toggleAttribute('aria-current', a.dataset.vista === vista);
-  });
-  if (vista === 'agendar') prepararFormulario();
-  if (vista === 'mis-citas') prepararConsulta();
-  window.scrollTo({ top: 0 });
+function irA(id) {
+  document.querySelectorAll('.screen').forEach((s) => s.classList.remove('active'));
+  $(id).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach((n) => n.classList.remove('active'));
+  $(NAV_DE_PANTALLA[id]).classList.add('active');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  if (id === 'scr-citas') cargarMisCitas();
+  if (id === 'scr-perfil') pintarPerfil();
+  if (id === 'scr-home') irPaso(1);
 }
 
-/* ---------- Catálogo ---------- */
+function irPaso(n) {
+  document.querySelectorAll('.step-section').forEach((s) => s.classList.remove('active'));
+  $(`step${n}`).classList.add('active');
+  for (let i = 1; i <= 3; i++) {
+    const e = $(`si${i}`);
+    e.classList.remove('active', 'done');
+    if (i < n) e.classList.add('done');
+    if (i === n) e.classList.add('active');
+  }
+  if (n === 3) {
+    rellenarDatos();
+    revisarFormulario();
+  }
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function mostrarAlerta(mensaje) {
+  const alerta = $('alerta');
+  alerta.textContent = mensaje ? `⚠️ ${mensaje}` : '';
+  alerta.style.display = mensaje ? 'flex' : 'none';
+  if (mensaje) window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function toast(mensaje) {
+  const t = document.createElement('div');
+  t.className = 'toast-p';
+  t.textContent = mensaje;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+
+/* ---------- Paso 1: servicios ---------- */
 
 async function cargarServicios() {
-  const contenedor = $('#lista-servicios');
+  const grid = $('services-grid');
   try {
-    estado.servicios = await api.servicios();
-    if (estado.servicios.length === 0) {
-      contenedor.innerHTML = '<p class="vacio">Por el momento no hay servicios disponibles.</p>';
+    estado.servicios = await apiPaciente.servicios();
+  } catch (e) {
+    grid.innerHTML = `<p style="color:var(--red);font-size:13px;grid-column:1/-1;">${escapar(e.message)}</p>`;
+    return;
+  }
+  if (estado.servicios.length === 0) {
+    grid.innerHTML = '<p style="color:var(--text-muted);font-size:13px;grid-column:1/-1;">Por el momento no hay servicios disponibles.</p>';
+    return;
+  }
+  grid.innerHTML = estado.servicios.map((s) => `
+    <div class="service-card" data-servicio="${s.id}" role="button" tabindex="0">
+      <div class="svc-check">✓</div>
+      <div class="svc-name">${escapar(s.nombre)}</div>
+      <div class="svc-price">${precio(s.costo)}</div>
+    </div>`).join('');
+}
+
+function elegirServicio(id) {
+  estado.servicio = estado.servicios.find((s) => s.id === Number(id)) || null;
+  document.querySelectorAll('.service-card').forEach((c) => {
+    c.classList.toggle('selected', Number(c.dataset.servicio) === estado.servicio?.id);
+  });
+  $('btn1').disabled = !estado.servicio;
+}
+
+/* ---------- Paso 2: fecha y bloque horario ---------- */
+
+async function cargarDiasProximos() {
+  const contenedor = $('dias-proximos');
+  try {
+    const dias = await apiPaciente.proximosDias();
+    contenedor.innerHTML = dias.length
+      ? dias.slice(0, 10).map(({ fecha }) => {
+        const { dia, mes } = partesFecha(fecha);
+        return `<button type="button" class="dia-chip${fecha === estado.fecha ? ' on' : ''}" data-dia="${fecha}">${dia} ${mes}</button>`;
+      }).join('')
+      : '<span class="field-hint">No hay horarios disponibles por ahora.</span>';
+  } catch {
+    contenedor.innerHTML = '';
+  }
+}
+
+async function cambiarFecha(fecha) {
+  estado.fecha = fecha;
+  estado.hora = '';
+  $('fecha-inp').value = fecha;
+  $('btn2').disabled = true;
+  document.querySelectorAll('.dia-chip').forEach((c) => c.classList.toggle('on', c.dataset.dia === fecha));
+
+  const grid = $('slot-grid');
+  if (!fecha) return;
+  grid.innerHTML = '<p style="color:var(--text-muted);font-size:13px;grid-column:1/-1;">Cargando...</p>';
+  try {
+    const { bloques } = await apiPaciente.bloquesDelDia(fecha);
+    if (bloques.length === 0) {
+      grid.innerHTML = '<p style="color:var(--text-muted);font-size:13px;grid-column:1/-1;">El dentista no atiende ese día. Elige otra fecha.</p>';
       return;
     }
-    contenedor.innerHTML = estado.servicios.map((s) => `
-      <article class="tarjeta servicio">
-        <h3>${escapar(s.nombre)}</h3>
-        ${s.descripcion ? `<p>${escapar(s.descripcion)}</p>` : ''}
-        <div class="servicio-pie">
-          <span class="precio">${formatoPrecio.format(s.costo)}</span>
-          <a class="boton boton-secundario boton-chico" href="#agendar" data-servicio="${s.id}">Agendar</a>
-        </div>
-      </article>`).join('');
-    llenarSelectServicios();
+    grid.innerHTML = bloques.map((b) => `
+      <div class="slot ${b.libre ? 'available' : 'blocked'}" ${b.libre ? `data-hora="${b.hora}" role="button" tabindex="0"` : ''}>
+        <span class="slot-lbl">${hora12(b.hora)}</span>
+        <span class="slot-sub">${b.libre ? 'Libre' : 'Ocupado'}</span>
+      </div>`).join('');
   } catch (e) {
-    contenedor.innerHTML = `<p class="alerta alerta-error">${escapar(e.message)}</p>`;
+    grid.innerHTML = `<p style="color:var(--red);font-size:13px;grid-column:1/-1;">${escapar(e.message)}</p>`;
   }
 }
 
-function llenarSelectServicios() {
-  const select = $('#campo-servicio');
-  const elegido = select.value;
-  select.innerHTML = '<option value="">Elige un servicio…</option>' + estado.servicios
-    .map((s) => `<option value="${s.id}">${escapar(s.nombre)} — ${formatoPrecio.format(s.costo)}</option>`)
-    .join('');
-  select.value = elegido;
+function elegirHora(hora) {
+  estado.hora = hora;
+  document.querySelectorAll('.slot').forEach((s) => s.classList.toggle('selected-slot', s.dataset.hora === hora));
+  $('btn2').disabled = false;
 }
 
-/* ---------- Formulario de cita ---------- */
+/* ---------- Paso 3: datos y envío ---------- */
 
-async function prepararFormulario() {
-  $('#formulario-cita').hidden = false;
-  $('#confirmacion').hidden = true;
-
-  const guardados = memoria.leer();
-  ['nombre', 'correo', 'telefono'].forEach((campo) => {
-    const input = $(`#campo-${campo}`);
-    if (!input.value && guardados[campo]) input.value = guardados[campo];
-  });
-  await cargarDias();
+function rellenarDatos() {
+  const guardado = paciente.leer();
+  if (!$('inp-nombre').value && guardado.nombre) $('inp-nombre').value = guardado.nombre;
+  if (!$('inp-email').value && guardado.correo) $('inp-email').value = guardado.correo;
+  if (!$('inp-tel').value && guardado.telefono) $('inp-tel').value = guardado.telefono;
 }
 
-async function cargarDias() {
-  const contenedor = $('#lista-dias');
-  contenedor.innerHTML = '<p class="cargando">Buscando días disponibles…</p>';
-  try {
-    estado.dias = await api.proximosDias();
-  } catch (e) {
-    contenedor.innerHTML = `<p class="alerta alerta-error">${escapar(e.message)}</p>`;
-    return;
+function revisarFormulario() {
+  const n = $('inp-nombre').value.trim();
+  const e = $('inp-email').value.trim();
+  const s = $('inp-sint').value.trim();
+  const ok = n.length > 2 && $('inp-email').checkValidity() && e.includes('@') && s.length > 3;
+  $('btn-enviar').disabled = !ok;
+  $('resumen').style.display = ok ? 'block' : 'none';
+  if (ok) {
+    $('r-servicio').textContent = estado.servicio?.nombre ?? '—';
+    $('r-precio').textContent = estado.servicio ? precio(estado.servicio.costo) : '—';
+    $('r-fecha').textContent = estado.fecha ? fechaLarga(estado.fecha) : '—';
+    $('r-hora').textContent = estado.hora ? hora12(estado.hora) : '—';
   }
-  if (estado.dias.length === 0) {
-    contenedor.innerHTML = '<p class="vacio">No hay horarios disponibles en los próximos días. Vuelve a intentarlo más tarde.</p>';
-    $('#lista-horas').innerHTML = '';
-    return;
-  }
-  if (!estado.dias.some((d) => d.fecha === estado.diaElegido)) {
-    estado.diaElegido = estado.dias[0].fecha;
-    estado.horaElegida = null;
-  }
-  pintarDias();
-  pintarHoras();
-}
-
-function pintarDias() {
-  $('#lista-dias').innerHTML = estado.dias.map(({ fecha, horas }) => `
-    <button type="button" class="ficha ficha-dia" role="radio" data-dia="${fecha}"
-      aria-checked="${fecha === estado.diaElegido}">
-      <strong>${escapar(diaCorto(fecha))}</strong>
-      <small>${horas.length} ${horas.length === 1 ? 'lugar' : 'lugares'}</small>
-    </button>`).join('');
-}
-
-function pintarHoras() {
-  const dia = estado.dias.find((d) => d.fecha === estado.diaElegido);
-  const contenedor = $('#lista-horas');
-  if (!dia) {
-    contenedor.innerHTML = '<p class="ayuda">Primero elige un día.</p>';
-    return;
-  }
-  contenedor.innerHTML = dia.horas.map((h) => `
-    <button type="button" class="ficha" role="radio" data-hora="${h}" aria-checked="${h === estado.horaElegida}">${h}</button>`).join('');
-}
-
-function mostrarError(mensaje) {
-  const alerta = $('#error-formulario');
-  alerta.textContent = mensaje;
-  alerta.hidden = !mensaje;
-  if (mensaje) alerta.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
 async function enviarCita(evento) {
   evento.preventDefault();
-  mostrarError('');
-
+  mostrarAlerta('');
   const datos = {
-    id_servicio: Number($('#campo-servicio').value),
-    fecha: estado.diaElegido,
-    hora: estado.horaElegida,
-    nombre: $('#campo-nombre').value.trim(),
-    correo: $('#campo-correo').value.trim(),
-    telefono: $('#campo-telefono').value.trim(),
-    sintomas: $('#campo-sintomas').value.trim(),
+    id_servicio: estado.servicio?.id,
+    fecha: estado.fecha,
+    hora: estado.hora,
+    nombre: $('inp-nombre').value.trim(),
+    correo: $('inp-email').value.trim(),
+    telefono: $('inp-tel').value.trim(),
+    sintomas: $('inp-sint').value.trim(),
   };
-
-  if (!datos.id_servicio) return mostrarError('Elige el servicio que necesitas.');
-  if (!datos.fecha || !datos.hora) return mostrarError('Elige el día y la hora de tu cita.');
-  if (!datos.nombre) return mostrarError('Escribe tu nombre completo.');
-  if (!$('#campo-correo').checkValidity() || !datos.correo) return mostrarError('Escribe un correo válido.');
-
-  const boton = $('#boton-enviar');
+  const boton = $('btn-enviar');
   boton.disabled = true;
-  boton.textContent = 'Enviando…';
+  boton.textContent = 'Enviando...';
   try {
-    await api.solicitarCita(datos);
-    memoria.guardar({ nombre: datos.nombre, correo: datos.correo, telefono: datos.telefono });
+    await apiPaciente.solicitarCita(datos);
+    paciente.guardar({ nombre: datos.nombre, correo: datos.correo, telefono: datos.telefono });
     mostrarConfirmacion(datos);
   } catch (e) {
-    mostrarError(e.message);
-    if (e.estado === 422) await cargarDias(); // la hora pudo haberse ocupado
+    mostrarAlerta(e.message);
+    if (e.estado === 422 && /horario|disponible|atiende/i.test(e.message)) {
+      irPaso(2);
+      cambiarFecha(estado.fecha);
+      cargarDiasProximos();
+    }
   } finally {
-    boton.disabled = false;
-    boton.textContent = 'Enviar solicitud';
+    boton.textContent = 'Enviar solicitud de cita ✓';
+    revisarFormulario();
   }
 }
 
 function mostrarConfirmacion(datos) {
-  const servicio = estado.servicios.find((s) => s.id === datos.id_servicio);
-  $('#resumen-cita').innerHTML = `
-    <dt>Servicio</dt><dd>${escapar(servicio?.nombre ?? '')}</dd>
-    <dt>Fecha</dt><dd>${escapar(fechaLarga(datos.fecha))}</dd>
-    <dt>Hora</dt><dd>${escapar(datos.hora)}</dd>
-    ${servicio ? `<dt>Costo</dt><dd>${formatoPrecio.format(servicio.costo)}</dd>` : ''}
-    <dt>Correo</dt><dd>${escapar(datos.correo)}</dd>`;
-  $('#formulario-cita').hidden = true;
-  $('#formulario-cita').reset();
-  estado.horaElegida = null;
-  const confirmacion = $('#confirmacion');
-  confirmacion.hidden = false;
-  confirmacion.focus();
+  const { dia, mes } = partesFecha(datos.fecha);
+  $('c-day').textContent = dia;
+  $('c-month').textContent = mes;
+  $('c-serv').textContent = estado.servicio?.nombre ?? '';
+  $('c-det').textContent = `${hora12(datos.hora)} · ${precio(estado.servicio?.costo ?? 0)}`;
+
+  $('form-cita').reset();
+  $('inp-sint').value = '';
+  estado.servicio = null;
+  estado.fecha = '';
+  estado.hora = '';
+  document.querySelectorAll('.service-card').forEach((c) => c.classList.remove('selected'));
+  $('btn1').disabled = true;
+  $('slot-grid').innerHTML = '<p style="color:var(--text-muted);font-size:13px;grid-column:1/-1;">Primero selecciona una fecha.</p>';
+
+  document.querySelectorAll('.screen').forEach((s) => s.classList.remove('active'));
+  $('scr-confirm').classList.add('active');
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 /* ---------- Mis citas ---------- */
 
-function prepararConsulta() {
-  const correo = memoria.leer().correo;
-  const input = $('#consulta-correo');
-  if (correo && !input.value) {
-    input.value = correo;
-    consultarCitas();
+function costoDe(cita) {
+  const s = estado.servicios.find((x) => x.id === cita.id_servicio);
+  return s ? ` · ${precio(s.costo)}` : '';
+}
+
+function tarjetaCita(c) {
+  const { dia, mes } = partesFecha(c.fecha);
+  const rechazada = c.estatus === 'Rechazada';
+  const aceptada = c.estatus === 'Aceptada';
+  const estiloCaja = rechazada ? 'background:var(--red-light);border-color:#fecaca;' : '';
+  const estiloTexto = rechazada ? 'color:var(--red);' : '';
+  const badge = aceptada ? 'badge-ok' : rechazada ? 'badge-no' : 'badge-pend';
+  return `
+    <div class="appt-card">
+      <div class="date-box" style="${estiloCaja}">
+        <div class="date-day" style="${estiloTexto}">${dia}</div>
+        <div class="date-month" style="${estiloTexto}">${mes}</div>
+      </div>
+      <div class="appt-info">
+        <div class="appt-service">${escapar(c.servicio)}</div>
+        <div class="appt-detail">${hora12(c.hora)}${costoDe(c)}</div>
+        ${c.correo_enviado && !c.estatus.startsWith('P') ? `<div class="mail-ok">📧 ${aceptada ? 'Correo de confirmación enviado' : 'Te avisamos por correo'}</div>` : ''}
+      </div>
+      <span class="badge ${badge}">${escapar(c.estatus)}</span>
+    </div>`;
+}
+
+async function cargarMisCitas() {
+  const correo = paciente.leer().correo;
+  const input = $('consulta-correo');
+  if (correo && !input.value) input.value = correo;
+  if (!input.value.trim()) {
+    estado.citas = [];
+    pintarMisCitas('Escribe el correo con el que agendaste para ver tus citas.');
+    return;
+  }
+  $('tab-act').innerHTML = '<div class="empty-msg">Cargando...</div>';
+  try {
+    estado.citas = await apiPaciente.misCitas(input.value.trim());
+    pintarMisCitas();
+  } catch (e) {
+    $('tab-act').innerHTML = `<div class="alert alert-err">⚠️ ${escapar(e.message)}</div>`;
   }
 }
 
-async function consultarCitas(evento) {
-  evento?.preventDefault();
-  const input = $('#consulta-correo');
-  const contenedor = $('#lista-citas');
-  if (!input.value.trim() || !input.checkValidity()) {
-    contenedor.innerHTML = '<p class="alerta alerta-error">Escribe un correo válido.</p>';
+function pintarMisCitas(mensajeVacio) {
+  const activas = estado.citas.filter((c) => c.estatus === 'Pendiente');
+  const historial = estado.citas.filter((c) => c.estatus !== 'Pendiente');
+  const notaCorreo = `
+    <div class="email-note"><span>📧</span><div>
+      <span class="email-note-bold">¿Cuándo responden?</span>
+      Recibirás un correo automático con la respuesta del dentista.
+    </div></div>`;
+
+  $('tab-act').innerHTML = activas.length
+    ? activas.map(tarjetaCita).join('') + `
+      <div class="block-card">
+        <h3>🔒 No puedes agendar otra cita</h3>
+        <p>Espera a que tu solicitud sea confirmada o rechazada.</p>
+      </div>` + notaCorreo
+    : `<div class="empty-msg">${escapar(mensajeVacio || 'No tienes citas activas.')}<br>
+        <button class="btn-small" data-ir="scr-home">Agendar una cita</button></div>` + notaCorreo;
+
+  $('tab-hist').innerHTML = historial.length
+    ? historial.map(tarjetaCita).join('')
+    : '<div class="empty-msg">No hay citas en el historial aún.</div>';
+}
+
+function cambiarPestana(id) {
+  document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('active', t.dataset.tab === id));
+  ['tab-act', 'tab-hist'].forEach((t) => { $(t).style.display = t === id ? 'block' : 'none'; });
+}
+
+/* ---------- Perfil ---------- */
+
+async function pintarPerfil() {
+  const p = paciente.leer();
+  $('av-initials').textContent = iniciales(p.nombre) || '👤';
+  $('av-nombre').textContent = p.nombre || 'Mi perfil';
+  $('av-email').textContent = p.correo || '—';
+  $('v-nombre').textContent = p.nombre || '—';
+  $('v-email').textContent = p.correo || '—';
+  $('v-tel').textContent = p.telefono || '—';
+
+  if (p.correo) {
+    try { estado.citas = await apiPaciente.misCitas(p.correo); } catch { /* se muestran los datos guardados */ }
+  }
+  const total = estado.citas.length;
+  $('st-total').textContent = total;
+  $('st-acept').textContent = estado.citas.filter((c) => c.estatus === 'Aceptada').length;
+  $('st-pend').textContent = estado.citas.filter((c) => c.estatus === 'Pendiente').length;
+  $('v-total').textContent = `${total} cita${total !== 1 ? 's' : ''}`;
+}
+
+let editando = false;
+function alternarEdicion(activar) {
+  editando = activar;
+  $('view-mode').style.display = editando ? 'none' : 'block';
+  $('edit-mode').style.display = editando ? 'block' : 'none';
+  $('edit-btn').textContent = editando ? 'Cancelar' : 'Editar';
+  if (editando) {
+    const p = paciente.leer();
+    $('e-nombre').value = p.nombre || '';
+    $('e-email').value = p.correo || '';
+    $('e-tel').value = p.telefono || '';
+  }
+}
+
+function guardarPerfil() {
+  const nombre = $('e-nombre').value.trim();
+  const correo = $('e-email').value.trim();
+  if (correo && !$('e-email').checkValidity()) {
+    toast('⚠️ Escribe un correo válido');
     return;
   }
-  contenedor.innerHTML = '<p class="cargando">Buscando tus citas…</p>';
-  try {
-    const citas = await api.misCitas(input.value.trim());
-    if (citas.length === 0) {
-      contenedor.innerHTML = '<p class="vacio">No encontramos citas con ese correo. <a href="#agendar">Agenda una aquí.</a></p>';
-      return;
-    }
-    contenedor.innerHTML = citas.map((c) => `
-      <article class="tarjeta cita">
-        <div class="cita-encabezado">
-          <h3>${escapar(c.servicio)}</h3>
-          <span class="estatus estatus-${escapar(c.estatus.toLowerCase())}">${escapar(c.estatus)}</span>
-        </div>
-        <p>${escapar(fechaLarga(c.fecha))} · ${escapar(c.hora)}</p>
-        ${c.sintomas ? `<p class="sintomas">${escapar(c.sintomas)}</p>` : ''}
-      </article>`).join('');
-  } catch (e) {
-    contenedor.innerHTML = `<p class="alerta alerta-error">${escapar(e.message)}</p>`;
-  }
+  paciente.guardar({ nombre, correo, telefono: $('e-tel').value.trim() });
+  $('consulta-correo').value = correo;
+  alternarEdicion(false);
+  pintarPerfil();
+  toast('✅ Datos actualizados');
+}
+
+function olvidarDatos() {
+  paciente.borrar();
+  estado.citas = [];
+  $('consulta-correo').value = '';
+  ['inp-nombre', 'inp-email', 'inp-tel'].forEach((id) => { $(id).value = ''; });
+  $('modal-logout').classList.remove('open');
+  irA('scr-home');
+  toast('✅ Sesión cerrada correctamente');
 }
 
 /* ---------- Eventos ---------- */
 
 document.addEventListener('click', (e) => {
-  const enlaceServicio = e.target.closest('[data-servicio]');
-  if (enlaceServicio) $('#campo-servicio').value = enlaceServicio.dataset.servicio;
+  const destino = e.target.closest('[data-ir]');
+  if (destino) irA(destino.dataset.ir);
 
-  const fichaDia = e.target.closest('[data-dia]');
-  if (fichaDia) {
-    estado.diaElegido = fichaDia.dataset.dia;
-    estado.horaElegida = null;
-    pintarDias();
-    pintarHoras();
-  }
+  const tarjeta = e.target.closest('[data-servicio]');
+  if (tarjeta) elegirServicio(tarjeta.dataset.servicio);
 
-  const fichaHora = e.target.closest('[data-hora]');
-  if (fichaHora) {
-    estado.horaElegida = fichaHora.dataset.hora;
-    pintarHoras();
+  const chip = e.target.closest('[data-dia]');
+  if (chip) cambiarFecha(chip.dataset.dia);
+
+  const slot = e.target.closest('[data-hora]');
+  if (slot) elegirHora(slot.dataset.hora);
+
+  const paso = e.target.closest('[data-paso]');
+  if (paso) irPaso(Number(paso.dataset.paso));
+
+  const pestana = e.target.closest('[data-tab]');
+  if (pestana) cambiarPestana(pestana.dataset.tab);
+});
+
+document.addEventListener('keydown', (e) => {
+  if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('[data-servicio], [data-hora]')) {
+    e.preventDefault();
+    e.target.click();
   }
 });
 
-$('#formulario-cita').addEventListener('submit', enviarCita);
-$('#formulario-consulta').addEventListener('submit', consultarCitas);
-window.addEventListener('hashchange', mostrarVista);
+$('btn1').addEventListener('click', () => {
+  if (!estado.servicio) return;
+  irPaso(2);
+  cargarDiasProximos();
+});
+$('btn2').addEventListener('click', () => irPaso(3));
+$('fecha-inp').addEventListener('change', (e) => cambiarFecha(e.target.value));
+['inp-nombre', 'inp-email', 'inp-sint'].forEach((id) => $(id).addEventListener('input', revisarFormulario));
+$('form-cita').addEventListener('submit', enviarCita);
+$('form-consulta').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const correo = $('consulta-correo').value.trim();
+  if (!$('consulta-correo').checkValidity() || !correo) {
+    toast('⚠️ Escribe un correo válido');
+    return;
+  }
+  if (!paciente.leer().correo) paciente.guardar({ correo });
+  cargarMisCitas();
+});
+$('edit-btn').addEventListener('click', () => alternarEdicion(!editando));
+$('btn-cancel-edit').addEventListener('click', () => alternarEdicion(false));
+$('btn-save-edit').addEventListener('click', guardarPerfil);
+$('btn-olvidar').addEventListener('click', () => $('modal-logout').classList.add('open'));
+$('btn-logout-cancel').addEventListener('click', () => $('modal-logout').classList.remove('open'));
+$('btn-logout-ok').addEventListener('click', olvidarDatos);
+$('btn-qr').addEventListener('click', (e) => { e.preventDefault(); $('modal-qr').classList.add('open'); });
+$('btn-qr-cerrar').addEventListener('click', () => $('modal-qr').classList.remove('open'));
 
+$('fecha-inp').min = hoyIso();
 cargarServicios();
-mostrarVista();

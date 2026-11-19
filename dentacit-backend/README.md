@@ -175,17 +175,31 @@ dentacit-backend/
     └── notif-service/        Node · src/{application, infrastructure} · tests/
 ```
 
-## Cliente web del paciente
+## Clientes web
 
-Página *mobile-first* (RNF-04) en `web/`, servida por el gateway en `http://<servidor>:8080/`.
-Es la dirección que abre el código QR del consultorio.
+Páginas en `web/` servidas por el gateway. Conservan el diseño de las vistas originales de Dentacit
+(`catalogo.php`, `login.php`, `dashboard.php`), pero ya no usan PHP: son HTML + CSS + JavaScript que
+consumen la API. Todo el texto que viene del servidor se escapa antes de mostrarse (prevención de XSS).
 
-| Vista | Qué hace | Endpoints |
+### Paciente — `http://<servidor>:8080/` (la dirección que abre el QR)
+
+| Pantalla | Qué hace | Endpoints |
 | --- | --- | --- |
-| Servicios | Catálogo con precios (RF-02) | `GET /servicios` |
-| Agendar | Servicio → día → hora → datos; confirma en estado Pendiente (RF-03, RF-04) | `GET /horarios/proximos`, `POST /citas` |
-| Mis citas | Consulta el estado de las citas con el correo | `GET /citas/paciente` |
+| Inicio (pasos 1-2-3) | Servicio → fecha y bloque (Libre / Ocupado) → datos (RF-02, RF-03) | `GET /servicios`, `GET /horarios/proximos`, `GET /horarios/disponibles`, `POST /citas` |
+| Confirmación | Muestra la cita en estado Pendiente (RF-04) | — |
+| Mis citas | Activas e historial con su estado | `GET /citas/paciente` |
+| Perfil | Datos y estadísticas del paciente (guardados solo en su navegador) | `GET /citas/paciente` |
 
-- HTML, CSS y JavaScript sin frameworks ni compilación (`js/api.js` = cliente del API, `js/app.js` = vistas).
-- Todo el texto que viene del servidor se escapa antes de mostrarse (prevención de XSS).
-- El navegador recuerda nombre, correo y teléfono del paciente para la siguiente visita.
+### Dentista — `http://<servidor>:8080/dentista/`
+
+| Pantalla | Qué hace | Endpoints |
+| --- | --- | --- |
+| Login | Inicio de sesión, recuperación y restablecimiento de contraseña (RF-01) | `POST /auth/login`, `/auth/recuperar`, `/auth/restablecer` |
+| Dashboard | Métricas, solicitudes recientes, calendario con días con citas | `GET /citas` |
+| Solicitudes | Filtro por estado; aceptar o rechazar con correo automático (RF-05, RF-06) | `GET /citas`, `PATCH /citas/{id}/estatus` |
+| Horarios | Alta y baja de bloques; rechaza empalmes (RNF-05) | `GET/POST/DELETE /horarios` |
+| Servicios | CRUD del catálogo (RF-07) | `GET/POST/PUT/DELETE /servicios` |
+| Correos enviados | Historial de notificaciones enviadas | `GET /citas` |
+| Mi código QR | QR generado por notif-service, descargable | `GET /qr` |
+
+El dentista puede usar el panel web o la app Android indistintamente: ambos consumen la misma API.

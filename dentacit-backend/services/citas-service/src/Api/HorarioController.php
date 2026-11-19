@@ -47,7 +47,11 @@ final class HorarioController
     {
         $fecha = (string)($p->query['fecha'] ?? '');
         $ahora = $this->ahora ? ($this->ahora)() : null;
-        return [200, ['fecha' => $fecha, 'horas' => $this->gestionar->disponibles($fecha, ($this->hoy)(), $ahora)]];
+        return [200, [
+            'fecha' => $fecha,
+            'horas' => $this->gestionar->disponibles($fecha, ($this->hoy)(), $ahora),
+            'bloques' => $this->gestionar->bloques($fecha, ($this->hoy)(), $ahora),
+        ]];
     }
 
     /** GET /api/horarios/proximos  (público: paciente) — días con lugar en los próximos 30 días. */

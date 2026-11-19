@@ -17,7 +17,7 @@ android {
 
         // URL del API Gateway. 10.0.2.2 es la PC anfitriona vista desde el emulador.
         // En un celular físico o en AWS, cámbiala por la IP o dominio del servidor.
-        buildConfigField("String", "BASE_URL", "\"http://10.0.2.2:8080/api/\"")
+        buildConfigField("String", "BASE_URL", "\"http://18.216.181.68/api/\"")
 
         // true = usa datos de prueba en memoria (no necesita backend).
         // false = consume la API REST real a través del gateway.

@@ -69,6 +69,28 @@ final class Agenda
     }
 
     /**
+     * Todos los espacios del día con su estado, para mostrar la rejilla Libre / Ocupado.
+     *
+     * @return array<int, array{hora:string, libre:bool}>
+     */
+    public function espacios(string $fecha): array
+    {
+        $espacios = [];
+        foreach ($this->horarios as $h) {
+            if ($h->fecha !== $fecha) {
+                continue;
+            }
+            $fin = Horario::aMinutos($h->fin);
+            for ($m = Horario::aMinutos($h->inicio); $m + $this->duracionCita <= $fin; $m += $this->duracionCita) {
+                $hora = Horario::aHora($m);
+                $espacios[$hora] = ['hora' => $hora, 'libre' => !in_array($hora, $this->horasOcupadas, true)];
+            }
+        }
+        ksort($espacios);
+        return array_values($espacios);
+    }
+
+    /**
      * Calcula los espacios libres de un día, en pasos de la duración de cita.
      *
      * @return string[] Horas de inicio disponibles (HH:MM), ordenadas.

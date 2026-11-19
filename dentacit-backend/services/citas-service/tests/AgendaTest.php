@@ -54,4 +54,14 @@ final class AgendaTest extends TestCase
         $this->expectException(ReglaNegocioException::class);
         $this->agenda(['10:00'])->validarEspacio('2026-12-01', '10:00');
     }
+
+    public function testLaRejillaMarcaLibresYOcupados(): void
+    {
+        $this->assertSame([
+            ['hora' => '09:00', 'libre' => true],
+            ['hora' => '10:00', 'libre' => false],
+            ['hora' => '11:00', 'libre' => true],
+            ['hora' => '12:00', 'libre' => true],
+        ], $this->agenda(['10:00'])->espacios('2026-12-01'));
+    }
 }

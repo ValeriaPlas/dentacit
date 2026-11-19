@@ -1,122 +1,270 @@
-<!doctype html>
-<html lang="es-MX">
+<!DOCTYPE html>
+<html lang="es">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Agenda tu cita dental en línea con DentaCit.">
-  <meta name="theme-color" content="#0F2340">
-  <title>DentaCit — Agenda tu cita dental</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/estilos.css">
-  <script type="module" src="/js/app.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0f2340">
+<title>DentaCit — Agenda tu Cita</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,600;1,300&family=Plus+Jakarta+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/estilos.css">
+<script type="module" src="/js/app.js"></script>
 </head>
 <body>
-  <header class="encabezado">
-    <a class="marca" href="#servicios" aria-label="DentaCit, inicio">
-      <span class="marca-icono" aria-hidden="true">
-        <svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M12 3c-1.6 0-2.5.7-3.6.7S6.4 3 5.2 3C3.1 3 2 4.9 2 7.2c0 2.6 1.2 4.3 1.9 6.6.6 2 .9 4.6 1.6 6.1.4.8 1 1.1 1.5 1.1 1.4 0 1.6-2.4 2.1-4.3.4-1.4.9-2.2 1.9-2.2s1.5.8 1.9 2.2c.5 1.9.7 4.3 2.1 4.3.5 0 1.1-.3 1.5-1.1.7-1.5 1-4.1 1.6-6.1.7-2.3 1.9-4 1.9-6.6C22 4.9 20.9 3 18.8 3c-1.2 0-2.1.7-3.2.7S13.6 3 12 3z"/></svg>
-      </span>
-      DentaCit
-    </a>
-    <nav class="menu" aria-label="Secciones">
-      <a href="#servicios" data-vista="servicios">Servicios</a>
-      <a href="#agendar" data-vista="agendar">Agendar</a>
-      <a href="#mis-citas" data-vista="mis-citas">Mis citas</a>
-    </nav>
-  </header>
 
-  <main id="contenido">
-    <!-- ============ Catálogo de servicios ============ -->
-    <section class="vista" id="vista-servicios" aria-labelledby="titulo-servicios">
-      <div class="portada">
-        <h1 id="titulo-servicios">Agenda tu cita dental en minutos</h1>
-        <p>Consulta nuestros servicios y precios, elige un horario disponible y recibe la confirmación en tu correo.</p>
-        <a class="boton boton-primario" href="#agendar">Agendar una cita</a>
+<!-- TOPBAR -->
+<div class="topbar">
+  <div>
+    <div class="logo">Denta<em>Cit</em></div>
+    <span class="logo-sub">Agenda Digital</span>
+  </div>
+  <a href="#" class="qr-chip" id="btn-qr">⬛ Acceso QR</a>
+</div>
+
+<!-- ═══ SCREEN 1: FORMULARIO ═══ -->
+<div class="screen active" id="scr-home">
+  <div class="hero">
+    <div class="hero-eyebrow">Consultorio · 24/7</div>
+    <h1>Agenda sin llamar, sin esperar</h1>
+    <p>Elige tu servicio, selecciona horario y listo en menos de 3 minutos.</p>
+    <div class="hero-deco">🦷</div>
+  </div>
+
+  <div class="content">
+    <div class="alert alert-err" id="alerta" role="alert" style="display:none;"></div>
+
+    <!-- Pasos -->
+    <div class="steps">
+      <div class="step active" id="si1"><div class="step-dot">1</div><div class="step-label">Servicio</div></div>
+      <div class="step" id="si2"><div class="step-dot">2</div><div class="step-label">Horario</div></div>
+      <div class="step" id="si3"><div class="step-dot">3</div><div class="step-label">Datos</div></div>
+    </div>
+
+    <form id="form-cita" novalidate>
+      <!-- PASO 1 -->
+      <div class="step-section active" id="step1">
+        <p class="section-label">Selecciona un servicio</p>
+        <div class="services-grid" id="services-grid">
+          <p style="color:var(--text-muted);font-size:13px;grid-column:1/-1;">Cargando servicios...</p>
+        </div>
+        <button type="button" class="btn-primary" id="btn1" disabled>Continuar → Elegir horario</button>
       </div>
-      <h2 class="subtitulo">Servicios y precios</h2>
-      <div id="lista-servicios" class="rejilla" aria-live="polite">
-        <p class="cargando">Cargando servicios…</p>
+
+      <!-- PASO 2 -->
+      <div class="step-section" id="step2">
+        <div class="form-card">
+          <div class="form-title">Fecha y horario</div>
+          <div class="form-sub">Solo se muestran los bloques definidos por el dentista</div>
+          <div class="field">
+            <label for="fecha-inp">Fecha deseada</label>
+            <input type="date" id="fecha-inp" required>
+            <div class="field-hint">Días con lugar disponible:</div>
+            <div class="dias-proximos" id="dias-proximos"></div>
+          </div>
+          <div class="field">
+            <label>Bloque horario</label>
+            <div class="slot-grid" id="slot-grid">
+              <p style="color:var(--text-muted);font-size:13px;grid-column:1/-1;">Primero selecciona una fecha.</p>
+            </div>
+            <div class="field-hint">🔵 Libre &nbsp;·&nbsp; ⚫ Ocupado</div>
+          </div>
+        </div>
+        <button type="button" class="btn-primary" id="btn2" disabled>Continuar → Mis datos</button>
+        <button type="button" class="btn-outline" data-paso="1">← Cambiar servicio</button>
       </div>
-    </section>
 
-    <!-- ============ Formulario de cita ============ -->
-    <section class="vista" id="vista-agendar" aria-labelledby="titulo-agendar" hidden>
-      <h1 id="titulo-agendar" class="titulo-vista">Solicitar una cita</h1>
-      <form id="formulario-cita" class="tarjeta formulario" novalidate>
-        <fieldset>
-          <legend><span class="paso">1</span> Servicio</legend>
-          <label class="campo">
-            <span class="sr-only">Servicio</span>
-            <select id="campo-servicio" name="id_servicio" required>
-              <option value="">Elige un servicio…</option>
-            </select>
-          </label>
-        </fieldset>
-
-        <fieldset>
-          <legend><span class="paso">2</span> Día</legend>
-          <div id="lista-dias" class="fichas fichas-desplazables" role="radiogroup" aria-label="Días disponibles">
-            <p class="cargando">Buscando días disponibles…</p>
+      <!-- PASO 3 -->
+      <div class="step-section" id="step3">
+        <div class="form-card">
+          <div class="form-title">Tus datos</div>
+          <div class="form-sub">Para confirmar y contactarte</div>
+          <div class="field">
+            <label for="inp-nombre">Nombre completo</label>
+            <input type="text" id="inp-nombre" placeholder="Tu nombre completo" maxlength="120" autocomplete="name" required>
           </div>
-        </fieldset>
-
-        <fieldset>
-          <legend><span class="paso">3</span> Hora</legend>
-          <div id="lista-horas" class="fichas" role="radiogroup" aria-label="Horas disponibles">
-            <p class="ayuda">Primero elige un día.</p>
+          <div class="field">
+            <label for="inp-email">Correo electrónico</label>
+            <input type="email" id="inp-email" placeholder="correo@ejemplo.com" maxlength="150" autocomplete="email" required>
+            <div class="field-hint">📧 Aquí llegará tu confirmación cuando sea aprobada</div>
           </div>
-        </fieldset>
+          <div class="field">
+            <label for="inp-tel">Teléfono</label>
+            <input type="tel" id="inp-tel" placeholder="+52 477 000 0000" maxlength="20" autocomplete="tel">
+          </div>
+          <div class="field">
+            <label for="inp-sint">Descripción de síntomas</label>
+            <textarea id="inp-sint" placeholder="Describe el motivo de tu visita..." maxlength="1000" required></textarea>
+          </div>
+          <div class="resumen-box" id="resumen" style="display:none;">
+            <div>🦷 <strong id="r-servicio"></strong></div>
+            <div>📅 <strong id="r-fecha"></strong> · <strong id="r-hora"></strong></div>
+            <div>💰 <strong id="r-precio"></strong></div>
+          </div>
+        </div>
+        <button type="submit" class="btn-primary" id="btn-enviar" disabled>Enviar solicitud de cita ✓</button>
+        <button type="button" class="btn-outline" data-paso="2">← Cambiar horario</button>
+      </div>
+    </form>
+  </div>
+  <div class="spacer"></div>
+</div>
 
-        <fieldset>
-          <legend><span class="paso">4</span> Tus datos</legend>
-          <label class="campo">Nombre completo
-            <input id="campo-nombre" name="nombre" autocomplete="name" required maxlength="120">
-          </label>
-          <label class="campo">Correo electrónico
-            <input id="campo-correo" name="correo" type="email" autocomplete="email" required maxlength="150">
-            <small>Aquí te avisaremos si tu cita fue aceptada.</small>
-          </label>
-          <label class="campo">Teléfono <span class="opcional">(opcional)</span>
-            <input id="campo-telefono" name="telefono" type="tel" autocomplete="tel" maxlength="20">
-          </label>
-          <label class="campo">¿Qué síntomas tienes? <span class="opcional">(opcional)</span>
-            <textarea id="campo-sintomas" name="sintomas" rows="3" maxlength="1000" placeholder="Ej. dolor al masticar del lado derecho"></textarea>
-          </label>
-        </fieldset>
+<!-- ═══ SCREEN 2: CONFIRMACIÓN ═══ -->
+<div class="screen" id="scr-confirm">
+  <div class="content">
+    <div class="confirm-center">
+      <div class="confirm-icon">✅</div>
+      <div class="confirm-title">¡Solicitud enviada!</div>
+      <div class="confirm-sub">Tu cita está pendiente de revisión. Te notificaremos por correo.</div>
+    </div>
+    <div class="pulse-bar">
+      <div class="pulse-dot"></div>
+      <div>
+        <div class="pulse-label">Estado: Pendiente de confirmación</div>
+        <div class="pulse-sub">Recibirás correo automático al ser aprobada</div>
+      </div>
+    </div>
+    <div class="email-note">
+      <span>📧</span>
+      <div>
+        <span class="email-note-bold">Notificación automática activada</span>
+        Cuando el dentista acepte tu cita recibirás un correo con todos los detalles.
+      </div>
+    </div>
+    <div class="appt-card">
+      <div class="date-box">
+        <div class="date-day" id="c-day">—</div>
+        <div class="date-month" id="c-month">—</div>
+      </div>
+      <div class="appt-info">
+        <div class="appt-service" id="c-serv">—</div>
+        <div class="appt-detail" id="c-det">—</div>
+      </div>
+      <span class="badge badge-pend">Pendiente</span>
+    </div>
+    <div class="alert alert-warn">
+      <span>⚠️</span>
+      <div><strong>Solo una cita activa a la vez.</strong> No podrás agendar otra hasta que esta sea aceptada o rechazada.</div>
+    </div>
+    <button class="btn-primary" data-ir="scr-citas">Ver mis citas →</button>
+  </div>
+  <div class="spacer"></div>
+</div>
 
-        <p id="error-formulario" class="alerta alerta-error" role="alert" hidden></p>
-        <button id="boton-enviar" class="boton boton-primario boton-ancho" type="submit">Enviar solicitud</button>
-      </form>
+<!-- ═══ SCREEN 3: MIS CITAS ═══ -->
+<div class="screen" id="scr-citas">
+  <div class="content" style="padding-top:20px;">
+    <p style="font-family:var(--font-d);font-size:22px;font-weight:600;margin-bottom:14px;">Mis citas</p>
+    <form class="consulta" id="form-consulta" novalidate>
+      <input type="email" id="consulta-correo" placeholder="Correo con el que agendaste" autocomplete="email">
+      <button type="submit">Ver</button>
+    </form>
+    <div class="tabs">
+      <div class="tab active" data-tab="tab-act">Activas</div>
+      <div class="tab" data-tab="tab-hist">Historial</div>
+    </div>
+    <div id="tab-act"></div>
+    <div id="tab-hist" style="display:none;"></div>
+  </div>
+  <div class="spacer"></div>
+</div>
 
-      <div id="confirmacion" class="tarjeta confirmacion" hidden tabindex="-1">
-        <div class="confirmacion-icono" aria-hidden="true">✓</div>
-        <h2>¡Solicitud enviada!</h2>
-        <p>Tu cita está en estado <span class="estatus estatus-pendiente">Pendiente</span>. Te avisaremos por correo cuando el dentista la acepte.</p>
-        <dl id="resumen-cita" class="resumen"></dl>
-        <div class="acciones">
-          <a class="boton boton-secundario" href="#mis-citas">Ver mis citas</a>
-          <a class="boton boton-texto" href="#servicios">Volver al inicio</a>
+<!-- ═══ SCREEN 4: PERFIL ═══ -->
+<div class="screen" id="scr-perfil">
+  <div class="profile-hero">
+    <div class="profile-avatar" id="av-initials">👤</div>
+    <div class="profile-name" id="av-nombre">Mi perfil</div>
+    <div class="profile-email-h" id="av-email">—</div>
+  </div>
+
+  <div class="content">
+    <div class="profile-stats">
+      <div class="stat-card"><div class="stat-number stat-blue" id="st-total">0</div><div class="stat-label">Total</div></div>
+      <div class="stat-card"><div class="stat-number stat-green" id="st-acept">0</div><div class="stat-label">Aceptadas</div></div>
+      <div class="stat-card"><div class="stat-number stat-gray" id="st-pend">0</div><div class="stat-label">Pendientes</div></div>
+    </div>
+
+    <div class="profile-section">
+      <div class="ps-header">
+        <div class="ps-title">Datos personales</div>
+        <div class="ps-edit-btn" id="edit-btn">Editar</div>
+      </div>
+      <div id="view-mode">
+        <div class="ps-row"><div class="ps-icon">👤</div><div><div class="ps-field-label">Nombre</div><div class="ps-field-value" id="v-nombre">—</div></div></div>
+        <div class="ps-row"><div class="ps-icon">📧</div><div><div class="ps-field-label">Correo</div><div class="ps-field-value" id="v-email">—</div></div></div>
+        <div class="ps-row"><div class="ps-icon">📞</div><div><div class="ps-field-label">Teléfono</div><div class="ps-field-value" id="v-tel">—</div></div></div>
+        <div class="ps-row"><div class="ps-icon">📋</div><div><div class="ps-field-label">Total de citas</div><div class="ps-field-value" id="v-total">0 citas</div></div></div>
+      </div>
+      <div id="edit-mode" style="display:none;padding:12px 16px;">
+        <div class="field" style="margin-bottom:11px;"><label for="e-nombre">Nombre</label><input class="ps-input" id="e-nombre"></div>
+        <div class="field" style="margin-bottom:11px;"><label for="e-email">Correo</label><input class="ps-input" type="email" id="e-email"></div>
+        <div class="field" style="margin-bottom:11px;"><label for="e-tel">Teléfono</label><input class="ps-input" type="tel" id="e-tel"></div>
+        <div style="display:flex;gap:8px;margin-top:4px;">
+          <button type="button" id="btn-cancel-edit" style="flex:1;padding:9px;border-radius:8px;border:1.5px solid var(--gray-200);background:white;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--font-b);">Cancelar</button>
+          <button type="button" id="btn-save-edit" style="flex:1;padding:9px;border-radius:8px;border:none;background:var(--blue);color:white;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--font-b);">Guardar</button>
         </div>
       </div>
-    </section>
+    </div>
 
-    <!-- ============ Consulta de citas ============ -->
-    <section class="vista" id="vista-mis-citas" aria-labelledby="titulo-mis-citas" hidden>
-      <h1 id="titulo-mis-citas" class="titulo-vista">Mis citas</h1>
-      <form id="formulario-consulta" class="tarjeta consulta" novalidate>
-        <label class="campo">Correo con el que agendaste
-          <input id="consulta-correo" type="email" autocomplete="email" required>
-        </label>
-        <button class="boton boton-primario" type="submit">Consultar</button>
-      </form>
-      <div id="lista-citas" class="lista-citas" aria-live="polite"></div>
-    </section>
-  </main>
+    <div class="profile-section">
+      <div class="ps-header"><div class="ps-title">Notificaciones y privacidad</div></div>
+      <div class="security-item" style="cursor:default;">
+        <div class="sec-icon-box sec-blue">📧</div>
+        <div class="sec-info" style="flex:1;">
+          <div class="sec-title">Notificaciones por correo</div>
+          <div class="sec-sub">Te avisamos cuando el dentista responde tu solicitud</div>
+        </div>
+        <span class="notif-on">Activadas</span>
+      </div>
+      <div class="security-item" id="btn-olvidar">
+        <div class="sec-icon-box sec-red">🚪</div>
+        <div class="sec-info" style="flex:1;">
+          <div class="sec-title" style="color:var(--red);">Cerrar sesión</div>
+          <div class="sec-sub">Borrar mis datos de este dispositivo</div>
+        </div>
+        <span style="color:var(--gray-200);font-size:18px;">›</span>
+      </div>
+    </div>
 
-  <footer class="pie">
-    <p>DentaCit · Consultorio dental</p>
-  </footer>
+    <div class="qr-note">
+      <div style="font-size:26px;opacity:.7;">⬛</div>
+      <div>
+        <div class="qr-note-title">Agenda sin crear cuenta</div>
+        <div class="qr-note-text">Escanea el QR del consultorio para agendar rápidamente. Tus datos se guardan solo en este dispositivo.</div>
+      </div>
+    </div>
+  </div>
+  <div class="spacer"></div>
+</div>
+
+<!-- MODAL CERRAR SESIÓN -->
+<div class="modal-fondo" id="modal-logout">
+  <div class="modal-caja">
+    <div style="font-size:44px;margin-bottom:12px;">🚪</div>
+    <div style="font-family:var(--font-d);font-size:20px;font-weight:600;margin-bottom:8px;">¿Cerrar sesión?</div>
+    <div style="font-size:13px;color:var(--text-muted);line-height:1.5;">Se borrarán tus datos de este dispositivo.<br>Podrás volver a agendar escaneando el QR.</div>
+    <div class="modal-btns">
+      <button class="mb-cancel" id="btn-logout-cancel">Cancelar</button>
+      <button class="mb-danger" id="btn-logout-ok">Cerrar sesión</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL QR -->
+<div class="modal-fondo" id="modal-qr">
+  <div class="modal-caja">
+    <div style="font-family:var(--font-d);font-size:20px;font-weight:600;margin-bottom:12px;">Código QR de DentaCit</div>
+    <img src="/api/qr" alt="Código QR para agendar en DentaCit">
+    <div style="font-size:12px;color:var(--text-muted);margin-top:8px;">Compártelo para que otros pacientes agenden aquí.</div>
+    <div class="modal-btns"><button class="mb-cancel" id="btn-qr-cerrar">Cerrar</button></div>
+  </div>
+</div>
+
+<!-- BOTTOM NAV -->
+<div class="bottom-nav">
+  <div class="nav-item active" id="nav-home" data-ir="scr-home"><div class="nav-icon">🏠</div><div class="nav-label">Inicio</div></div>
+  <div class="nav-item" id="nav-citas" data-ir="scr-citas"><div class="nav-icon">📋</div><div class="nav-label">Mis citas</div></div>
+  <div class="nav-item" id="nav-perfil" data-ir="scr-perfil"><div class="nav-icon">👤</div><div class="nav-label">Perfil</div></div>
+</div>
+
 </body>
 </html>

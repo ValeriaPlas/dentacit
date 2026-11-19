@@ -84,6 +84,33 @@ final class GestionarHorarios
     }
 
     /**
+     * Rejilla del día con todos los bloques y si están libres u ocupados.
+     * Hoy no se muestran las horas que ya pasaron.
+     *
+     * @return array<int, array{hora:string, libre:bool}>
+     */
+    public function bloques(string $fecha, string $hoy, ?string $ahora = null): array
+    {
+        $f = DateTimeImmutable::createFromFormat('!Y-m-d', $fecha);
+        if ($f === false || $f->format('Y-m-d') !== $fecha) {
+            throw new ReglaNegocioException('La fecha debe tener el formato AAAA-MM-DD.');
+        }
+        if ($fecha < $hoy) {
+            return [];
+        }
+        $agenda = new Agenda(
+            $this->horarios->listarPorFecha($fecha),
+            $this->citas->horasOcupadas($fecha),
+            $this->duracionCita
+        );
+        $espacios = $agenda->espacios($fecha);
+        if ($fecha === $hoy && $ahora !== null) {
+            $espacios = array_values(array_filter($espacios, fn(array $e) => $e['hora'] > $ahora));
+        }
+        return $espacios;
+    }
+
+    /**
      * Próximos días con espacios libres, para que el paciente elija sin adivinar fechas.
      *
      * @return array<int, array{fecha:string, horas:string[]}>

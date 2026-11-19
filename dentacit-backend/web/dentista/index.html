@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0f2340">
+<title>DentaCit — Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,600;1,300&family=Plus+Jakarta+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/dentista.css">
+<script type="module" src="/js/dentista.js"></script>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar" id="sidebar">
+  <div class="sb-logo">
+    <div class="sb-logo-name">Denta<em>Cit</em></div>
+    <div class="sb-logo-sub">Panel del dentista</div>
+  </div>
+  <div class="sb-user">
+    <div class="sb-av" id="sb-av">DR</div>
+    <div>
+      <div class="sb-name" id="sb-name">Dentista</div>
+      <div class="sb-role">Administrador · Dentista</div>
+    </div>
+  </div>
+  <nav class="sb-nav">
+    <div class="sb-lbl">Principal</div>
+    <div class="sb-item active" data-scr="scr-dash"><span class="sb-icon">📊</span> Dashboard</div>
+    <div class="sb-item" data-scr="scr-citas"><span class="sb-icon">📋</span> Solicitudes <span class="sb-badge" id="sb-badge" style="display:none;"></span></div>
+    <div class="sb-item" data-scr="scr-horarios"><span class="sb-icon">🕐</span> Horarios</div>
+    <div class="sb-item" data-scr="scr-servicios"><span class="sb-icon">🦷</span> Servicios</div>
+    <div class="sb-item" data-scr="scr-correos"><span class="sb-icon">📧</span> Correos enviados</div>
+    <div class="sb-lbl" style="margin-top:8px;">Acceso</div>
+    <div class="sb-item" data-scr="scr-qr"><span class="sb-icon">⬛</span> Mi código QR</div>
+  </nav>
+  <div class="sb-footer">
+    <button class="sb-logout" id="btn-logout">⬅ Cerrar sesión</button>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+
+  <!-- ══ DASHBOARD ══ -->
+  <div class="screen active" id="scr-dash">
+    <div class="page-hdr">
+      <div style="display:flex;align-items:center;">
+        <button class="menu-btn" data-menu aria-label="Menú">☰</button>
+        <div>
+          <div class="page-title">Dashboard</div>
+          <div class="page-sub" id="hoy-texto"></div>
+        </div>
+      </div>
+      <button class="btn btn-outline" data-scr="scr-qr">⬛ Ver QR</button>
+    </div>
+
+    <div class="metrics">
+      <div class="metric alert"><div class="metric-icon">🔔</div><div class="metric-lbl">Pendientes</div><div class="metric-val" id="m-pend">0</div><div class="metric-note note-red" id="m-pend-nota">—</div></div>
+      <div class="metric"><div class="metric-icon">✅</div><div class="metric-lbl">Aceptadas</div><div class="metric-val" id="m-acept">0</div></div>
+      <div class="metric"><div class="metric-icon">📧</div><div class="metric-lbl">Correos enviados</div><div class="metric-val" id="m-correos">0</div><div class="metric-note note-blue">automático</div></div>
+      <div class="metric"><div class="metric-icon">📋</div><div class="metric-lbl">Total citas</div><div class="metric-val" id="m-total">0</div></div>
+    </div>
+
+    <div class="panels">
+      <div class="panel">
+        <div class="ph">
+          <div class="ph-title">Solicitudes recientes</div>
+          <div style="display:flex;align-items:center;gap:5px;font-size:10px;color:var(--text-muted);" id="pend-indicador"></div>
+        </div>
+        <div class="pb" id="lista-recientes"><p class="vacio">Cargando...</p></div>
+      </div>
+
+      <div class="panel">
+        <div class="ph"><div class="ph-title" id="cal-titulo">Calendario</div></div>
+        <div class="pb">
+          <div class="cal">
+            <div class="cal-hd">
+              <button class="cal-nav" id="cal-prev" aria-label="Mes anterior">&#8249;</button>
+              <span id="cal-mes-label" style="font-size:13px;font-weight:700;"></span>
+              <button class="cal-nav" id="cal-next" aria-label="Mes siguiente">&#8250;</button>
+            </div>
+            <div class="cgrid" id="cal-grid">
+              <div class="ch">L</div><div class="ch">M</div><div class="ch">M</div><div class="ch">J</div><div class="ch">V</div><div class="ch">S</div><div class="ch">D</div>
+            </div>
+            <div class="cal-leyenda">
+              <div class="cal-leyenda-item"><div style="width:6px;height:6px;border-radius:50%;background:var(--amber);"></div>Con citas</div>
+              <div class="cal-leyenda-item"><div style="width:12px;height:12px;border-radius:4px;background:var(--blue);"></div>Hoy</div>
+            </div>
+            <div id="cal-detalle" style="margin-top:10px;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ SOLICITUDES ══ -->
+  <div class="screen" id="scr-citas">
+    <div class="page-hdr">
+      <div style="display:flex;align-items:center;">
+        <button class="menu-btn" data-menu aria-label="Menú">☰</button>
+        <div>
+          <div class="page-title">Gestión de solicitudes</div>
+          <div class="page-sub">Al aceptar o rechazar se envía correo automático al paciente</div>
+        </div>
+      </div>
+      <select id="filtro-estatus" aria-label="Filtrar solicitudes">
+        <option value="">Todas</option>
+        <option value="Pendiente">Pendientes</option>
+        <option value="Aceptada">Aceptadas</option>
+        <option value="Rechazada">Rechazadas</option>
+      </select>
+    </div>
+    <div class="panel" style="max-width:780px;">
+      <div class="ph">
+        <div class="ph-title" id="titulo-filtro">Todas las solicitudes</div>
+        <span style="font-size:10px;color:var(--text-muted);" id="conteo-filtro"></span>
+      </div>
+      <div class="pb" id="lista-solicitudes"><p class="vacio">Cargando...</p></div>
+    </div>
+  </div>
+
+  <!-- ══ HORARIOS ══ -->
+  <div class="screen" id="scr-horarios">
+    <div class="page-hdr">
+      <div style="display:flex;align-items:center;">
+        <button class="menu-btn" data-menu aria-label="Menú">☰</button>
+        <div>
+          <div class="page-title">Gestión de horarios</div>
+          <div class="page-sub">Solo los bloques definidos aparecen disponibles al paciente</div>
+        </div>
+      </div>
+      <button class="btn btn-solid" id="btn-nuevo-horario">+ Agregar bloque</button>
+    </div>
+    <div class="panel" style="max-width:620px;">
+      <div class="ph">
+        <div class="ph-title">Bloques disponibles</div>
+        <span class="badge ba" id="conteo-horarios">0 bloques</span>
+      </div>
+      <div class="pb" style="padding:14px;">
+        <p style="font-size:11px;color:var(--text-muted);margin-bottom:12px;">Cada bloque se divide en citas de 1 hora. Los bloques no pueden empalmarse.</p>
+        <div id="lista-horarios"><p class="vacio">Cargando...</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ SERVICIOS ══ -->
+  <div class="screen" id="scr-servicios">
+    <div class="page-hdr">
+      <div style="display:flex;align-items:center;">
+        <button class="menu-btn" data-menu aria-label="Menú">☰</button>
+        <div>
+          <div class="page-title">Catálogo de servicios</div>
+          <div class="page-sub">CRUD completo · Precios visibles al paciente vía QR</div>
+        </div>
+      </div>
+      <button class="btn btn-solid" id="btn-nuevo-servicio">+ Agregar servicio</button>
+    </div>
+    <div class="panel" style="max-width:660px;">
+      <div class="ph">
+        <div class="ph-title">Servicios</div>
+        <span style="font-size:11px;color:var(--text-muted);" id="conteo-servicios"></span>
+      </div>
+      <div class="pb" style="padding:0 8px 8px;" id="tabla-servicios"><p class="vacio">Cargando...</p></div>
+    </div>
+  </div>
+
+  <!-- ══ CORREOS ENVIADOS ══ -->
+  <div class="screen" id="scr-correos">
+    <div class="page-hdr">
+      <div style="display:flex;align-items:center;">
+        <button class="menu-btn" data-menu aria-label="Menú">☰</button>
+        <div>
+          <div class="page-title">Correos enviados</div>
+          <div class="page-sub">Log automático · notif-service + SMTP</div>
+        </div>
+      </div>
+    </div>
+    <div class="panel" style="max-width:660px;">
+      <div class="ph">
+        <div class="ph-title">Historial de notificaciones</div>
+        <span class="badge ba" id="conteo-correos">0 enviados</span>
+      </div>
+      <div class="pb" id="lista-correos"></div>
+    </div>
+  </div>
+
+  <!-- ══ QR ══ -->
+  <div class="screen" id="scr-qr">
+    <div class="page-hdr">
+      <div style="display:flex;align-items:center;">
+        <button class="menu-btn" data-menu aria-label="Menú">☰</button>
+        <div>
+          <div class="page-title">Código QR del consultorio</div>
+          <div class="page-sub">Los pacientes escanean este código para agendar su cita</div>
+        </div>
+      </div>
+    </div>
+    <div class="qr-banner">
+      <div class="qr-box"><img id="qr-img" src="/api/qr" alt="QR DentaCit"></div>
+      <div class="qr-info">
+        <h3>QR del consultorio</h3>
+        <p>Imprime este código y pégalo en tu consultorio, tarjetas o redes sociales.</p>
+        <div class="qr-url" id="qr-url"></div>
+        <div class="qr-btns">
+          <button class="qr-btn qb-dl" id="btn-qr-actualizar">🔄 Generar QR</button>
+          <a href="/api/qr?tamano=800" download="dentacit_qr.png"><button class="qr-btn qb-pr">⬇ Descargar PNG</button></a>
+        </div>
+      </div>
+    </div>
+    <div class="panel" style="max-width:660px;">
+      <div class="ph"><div class="ph-title">¿Cómo usar el QR?</div></div>
+      <div class="pb" style="padding:14px;">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;">
+          <div style="background:var(--gray-50);border-radius:9px;padding:13px;"><div style="font-size:18px;margin-bottom:5px;">🖨</div><div style="font-size:12px;font-weight:700;margin-bottom:2px;">Impresión</div><div style="font-size:11px;color:var(--text-muted);">Pega el QR en tu sala de espera.</div></div>
+          <div style="background:var(--gray-50);border-radius:9px;padding:13px;"><div style="font-size:18px;margin-bottom:5px;">💳</div><div style="font-size:12px;font-weight:700;margin-bottom:2px;">Tarjetas</div><div style="font-size:11px;color:var(--text-muted);">Agrega a tus tarjetas profesionales.</div></div>
+          <div style="background:var(--gray-50);border-radius:9px;padding:13px;"><div style="font-size:18px;margin-bottom:5px;">📱</div><div style="font-size:12px;font-weight:700;margin-bottom:2px;">Redes sociales</div><div style="font-size:11px;color:var(--text-muted);">Comparte en Instagram o WhatsApp.</div></div>
+          <div style="background:var(--blue-light);border-radius:9px;padding:13px;border:1px solid var(--blue-pale);"><div style="font-size:18px;margin-bottom:5px;">🔄</div><div style="font-size:12px;font-weight:700;margin-bottom:2px;color:var(--blue-deep);">Actualizar QR</div><div style="font-size:11px;color:var(--blue);">Si cambia la IP o el dominio del servidor, el QR se genera con la nueva dirección (WEB_URL).</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- MODAL SERVICIO -->
+<div class="modal-ov" id="modal-servicio">
+  <div class="modal" role="dialog" aria-labelledby="ms-titulo">
+    <h3 id="ms-titulo">Nuevo servicio</h3>
+    <div class="merr" id="ms-err"></div>
+    <div class="mfield"><label for="mn">Nombre del servicio</label><input type="text" id="mn" placeholder="Ej. Endodoncia" maxlength="120"></div>
+    <div class="mfield"><label for="md">Descripción</label><textarea id="md" placeholder="Ej. Tratamiento de conducto"></textarea></div>
+    <div class="mfield"><label for="mc">Costo (MXN)</label><input type="number" id="mc" placeholder="0" min="1" step="0.01"></div>
+    <div class="mfield"><label class="mcheck"><input type="checkbox" id="ma" checked> Visible para pacientes</label></div>
+    <div class="mfooter">
+      <button class="m-cancel" data-cerrar="modal-servicio">Cancelar</button>
+      <button class="m-save" id="ms-guardar">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL HORARIO -->
+<div class="modal-ov" id="modal-horario">
+  <div class="modal" role="dialog" aria-labelledby="mh-titulo">
+    <h3 id="mh-titulo">Nuevo bloque de horario</h3>
+    <div class="merr" id="mh-err"></div>
+    <div class="mfield"><label for="mh-fecha">Fecha</label><input type="date" id="mh-fecha"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div class="mfield"><label for="mh-inicio">Hora de inicio</label><input type="time" id="mh-inicio" value="09:00" step="1800"></div>
+      <div class="mfield"><label for="mh-fin">Hora de fin</label><input type="time" id="mh-fin" value="14:00" step="1800"></div>
+    </div>
+    <div class="mfooter">
+      <button class="m-cancel" data-cerrar="modal-horario">Cancelar</button>
+      <button class="m-save" id="mh-guardar">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast-el" role="status"></div>
+</body>
+</html>

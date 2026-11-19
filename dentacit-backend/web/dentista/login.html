@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0f2340">
+<title>DentaCit — Acceso Dentista</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,600;1,300&family=Plus+Jakarta+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --blue:        #2563eb;
+  --blue-dark:   #1e40af;
+  --blue-deep:   #1e3a6e;
+  --blue-deeper: #0f2340;
+  --blue-light:  #eff6ff;
+  --blue-pale:   #dbeafe;
+  --gray-bg:     #f1f3f8;
+  --gray-100:    #e8eaf0;
+  --gray-200:    #c8d0de;
+  --text:        #0f1728;
+  --text-muted:  #8a95a8;
+  --red:         #dc2626;
+  --green:       #16a34a;
+  --font-d:      'Fraunces', serif;
+  --font-b:      'Plus Jakarta Sans', sans-serif;
+  --r:           12px;
+}
+
+body { font-family: var(--font-b); background: var(--blue-deeper); min-height: 100vh; display: grid; grid-template-columns: 1.1fr 1fr; }
+
+/* LEFT */
+.left { padding: 40px 42px; display: flex; flex-direction: column; justify-content: space-between; color: white; position: relative; overflow: hidden; }
+.left::before { content: ''; position: absolute; width: 480px; height: 480px; border-radius: 50%; border: 80px solid rgba(37,99,235,0.12); right: -130px; top: -130px; pointer-events: none; }
+.left::after  { content: ''; position: absolute; width: 320px; height: 320px; border-radius: 50%; border: 55px solid rgba(37,99,235,0.08); left: -80px; bottom: -80px; pointer-events: none; }
+
+.brand { position: relative; z-index: 1; }
+.brand-name { font-family: var(--font-d); font-size: 28px; color: white; font-weight: 600; }
+.brand-name em { color: #93c5fd; font-style: normal; }
+.brand-sub  { font-size: 9px; color: rgba(255,255,255,0.3); letter-spacing: 1.2px; text-transform: uppercase; margin-top: 3px; }
+
+.left-center { position: relative; z-index: 1; }
+.left-center h2 { font-family: var(--font-d); font-size: 34px; line-height: 1.2; margin-bottom: 13px; max-width: 310px; font-style: italic; font-weight: 300; }
+.left-center p  { font-size: 13px; color: rgba(255,255,255,0.5); max-width: 290px; line-height: 1.65; }
+
+.feats { position: relative; z-index: 1; }
+.feat  { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 14px; }
+.feat-ic { width: 32px; height: 32px; border-radius: 8px; background: rgba(37,99,235,0.25); border: 1px solid rgba(37,99,235,0.3); display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
+.feat-title { font-size: 12px; font-weight: 600; color: white; margin-bottom: 1px; }
+.feat-desc  { font-size: 11px; color: rgba(255,255,255,0.45); line-height: 1.4; }
+
+.qr-note-l { position: relative; z-index: 1; display: flex; align-items: center; gap: 9px; background: rgba(37,99,235,0.15); border: 1px solid rgba(37,99,235,0.25); border-radius: 9px; padding: 10px 13px; }
+.qr-note-l p { font-size: 11px; color: rgba(255,255,255,0.55); line-height: 1.4; }
+.qr-note-l strong { color: #93c5fd; }
+
+/* RIGHT */
+.right { background: var(--gray-bg); display: flex; align-items: center; justify-content: center; padding: 32px; }
+.card  { background: white; border-radius: 18px; padding: 36px 34px; width: 100%; max-width: 385px; border: 1px solid rgba(0,0,0,0.06); }
+
+.cs { display: none; }
+.cs.active { display: block; }
+
+.c-eye   { font-size: 10px; font-weight: 700; letter-spacing: 1.4px; text-transform: uppercase; color: var(--blue); margin-bottom: 7px; }
+.c-title { font-family: var(--font-d); font-size: 25px; font-weight: 600; margin-bottom: 4px; color: var(--text); }
+.c-sub   { font-size: 12px; color: var(--text-muted); margin-bottom: 24px; line-height: 1.5; }
+
+.field { margin-bottom: 13px; }
+.field label { display: block; font-size: 10px; font-weight: 700; color: var(--text-muted); margin-bottom: 5px; letter-spacing: 0.5px; text-transform: uppercase; }
+.fw { position: relative; }
+.field input { width: 100%; border: 1.5px solid var(--gray-100); border-radius: 8px; padding: 11px 13px; font-family: var(--font-b); font-size: 14px; color: var(--text); background: var(--gray-bg); outline: none; transition: border-color .2s; }
+.field input:focus { border-color: var(--blue); background: white; }
+.field input.err   { border-color: var(--red); background: #fff8f8; }
+.eye-btn { position: absolute; right: 11px; top: 50%; transform: translateY(-50%); cursor: pointer; font-size: 13px; color: var(--text-muted); user-select: none; }
+
+.row-in { display: flex; justify-content: space-between; align-items: center; margin-bottom: 17px; }
+.remember { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text-muted); cursor: pointer; }
+.remember input { accent-color: var(--blue); }
+.forgot { font-size: 12px; color: var(--blue); font-weight: 600; cursor: pointer; }
+.forgot:hover { text-decoration: underline; }
+
+.err-box { display: none; background: #fff0f0; border: 1px solid #fcc; border-left: 3px solid var(--red); border-radius: 7px; padding: 9px 12px; margin-bottom: 13px; font-size: 12px; color: #7f1d1d; }
+.err-box.show { display: block; }
+.ok-box  { display: none; background: var(--blue-light); border: 1px solid var(--blue-pale); border-left: 3px solid var(--blue); border-radius: 7px; padding: 9px 12px; margin-bottom: 13px; font-size: 12px; color: var(--blue-deep); }
+.ok-box.show { display: block; }
+
+.btn-lg { width: 100%; background: var(--blue); color: white; border: none; border-radius: 9px; padding: 12px; font-family: var(--font-b); font-size: 14px; font-weight: 600; cursor: pointer; transition: background .2s; display: flex; align-items: center; justify-content: center; gap: 6px; }
+.btn-lg:hover { background: var(--blue-dark); }
+
+.divider { display: flex; align-items: center; gap: 10px; margin: 17px 0; color: var(--text-muted); font-size: 10px; }
+.divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--gray-100); }
+
+.note { background: var(--gray-bg); border-radius: 7px; padding: 10px 12px; font-size: 11px; color: var(--text-muted); display: flex; gap: 7px; line-height: 1.5; }
+.note-blue { background: var(--blue-light); border: 1px solid var(--blue-pale); color: var(--blue-deep); margin-top: 8px; }
+
+.back-btn { background: none; border: none; color: var(--blue); font-family: var(--font-b); font-size: 12px; font-weight: 600; cursor: pointer; padding: 0; margin-bottom: 16px; display: flex; align-items: center; gap: 4px; }
+.back-btn:hover { text-decoration: underline; }
+
+@keyframes spin { to{transform:rotate(360deg);} }
+.spinner { width: 15px; height: 15px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin .7s linear infinite; }
+
+@media (max-width: 680px) { body { grid-template-columns: 1fr; } .left { display: none; } .right { padding: 18px; } }
+.btn-lg:disabled { opacity: .7; cursor: wait; }
+.eye-btn { background: none; border: none; }
+</style>
+<script type="module" src="/js/login.js"></script>
+</head>
+<body>
+
+<!-- LEFT -->
+<div class="left">
+  <div class="brand">
+    <div class="brand-name">Denta<em>Cit</em></div>
+    <div class="brand-sub">Sistema de gestión odontológica</div>
+  </div>
+  <div class="left-center">
+    <h2>Tu consultorio, siempre disponible.</h2>
+    <p>Gestiona agenda, acepta solicitudes y actualiza tu catálogo desde cualquier dispositivo.</p>
+  </div>
+  <div class="feats">
+    <div class="feat"><div class="feat-ic">📋</div><div><div class="feat-title">Solicitudes en tiempo real</div><div class="feat-desc">Acepta o rechaza citas. Correo automático al paciente.</div></div></div>
+    <div class="feat"><div class="feat-ic">🕐</div><div><div class="feat-title">Control de horarios</div><div class="feat-desc">Define los bloques disponibles para los pacientes.</div></div></div>
+    <div class="feat"><div class="feat-ic">🦷</div><div><div class="feat-title">Catálogo con precios</div><div class="feat-desc">El paciente ve costos antes de solicitar su cita.</div></div></div>
+    <a href="/" style="text-decoration:none;">
+      <div class="qr-note-l">
+        <span style="font-size:18px;">⬛</span>
+        <p><strong>Acceso paciente vía QR</strong> — escanea el QR del consultorio y agenda sin crear cuenta. <span style="color:#93c5fd;margin-left:4px;">→</span></p>
+      </div>
+    </a>
+  </div>
+</div>
+
+<!-- RIGHT -->
+<div class="right">
+  <div class="card">
+
+    <!-- LOGIN -->
+    <div class="cs active" id="cs-login">
+      <div class="c-eye">Acceso exclusivo</div>
+      <div class="c-title">Panel del dentista</div>
+      <div class="c-sub">Ingresa con tus credenciales para gestionar tu agenda</div>
+      <div class="err-box" id="login-err" role="alert"></div>
+      <form id="form-login" novalidate>
+        <div class="field">
+          <label for="i-correo">Correo electrónico</label>
+          <input type="email" id="i-correo" placeholder="doctor@consultorio.com" autocomplete="username" required>
+        </div>
+        <div class="field">
+          <label for="i-pw">Contraseña</label>
+          <div class="fw">
+            <input type="password" id="i-pw" placeholder="••••••••" autocomplete="current-password" required>
+            <button type="button" class="eye-btn" id="btn-ojo" aria-label="Mostrar contraseña">👁</button>
+          </div>
+        </div>
+        <div class="row-in">
+          <label class="remember"><input type="checkbox" id="i-recordar"> Recordarme</label>
+          <span class="forgot" data-cs="cs-recover" role="button" tabindex="0">¿Olvidaste tu contraseña?</span>
+        </div>
+        <button type="submit" class="btn-lg" id="btn-login">Ingresar al panel →</button>
+      </form>
+    </div>
+
+    <!-- RECUPERAR -->
+    <div class="cs" id="cs-recover">
+      <button class="back-btn" data-cs="cs-login">← Volver</button>
+      <div class="c-eye">Recuperación de acceso</div>
+      <div class="c-title">Recuperar contraseña</div>
+      <div class="c-sub">Ingresa tu correo y te enviaremos un código para restablecer tu contraseña.</div>
+      <div class="ok-box" id="rec-ok"></div>
+      <div class="err-box" id="rec-err" role="alert"></div>
+      <div class="field">
+        <label for="i-rec">Correo electrónico registrado</label>
+        <input type="email" id="i-rec" placeholder="doctor@consultorio.com">
+      </div>
+      <button class="btn-lg" id="btn-rec">Enviar código de recuperación 📧</button>
+      <div class="note" style="margin-top:12px;"><span>📧</span>El código se envía por correo (notif-service) y expira en 30 minutos.</div>
+      <div class="note note-blue"><span>🔑</span><span>¿Ya tienes el código? <a href="#" data-cs="cs-reset" style="color:var(--blue);font-weight:600;">Restablecer contraseña</a></span></div>
+    </div>
+
+    <!-- RESTABLECER -->
+    <div class="cs" id="cs-reset">
+      <button class="back-btn" data-cs="cs-login">← Volver</button>
+      <div class="c-eye">Recuperación de acceso</div>
+      <div class="c-title">Nueva contraseña</div>
+      <div class="c-sub">Escribe el código que recibiste por correo y tu nueva contraseña.</div>
+      <div class="ok-box" id="reset-ok"></div>
+      <div class="err-box" id="reset-err" role="alert"></div>
+      <div class="field"><label for="i-codigo">Código de recuperación</label><input id="i-codigo" autocomplete="one-time-code"></div>
+      <div class="field"><label for="i-nueva">Nueva contraseña</label><input type="password" id="i-nueva" placeholder="Mínimo 8 caracteres" autocomplete="new-password"></div>
+      <div class="field"><label for="i-confirma">Confirmar contraseña</label><input type="password" id="i-confirma" autocomplete="new-password"></div>
+      <button class="btn-lg" id="btn-reset">Guardar nueva contraseña</button>
+    </div>
+
+  </div>
+</div>
+</body>
+</html>
